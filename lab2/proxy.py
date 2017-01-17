@@ -1,5 +1,5 @@
 import socket
-import os
+import os, select
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -10,14 +10,14 @@ server_socket.listen(5)
 while True:
     (incomingSocket, address) = server_socket.accept()
     print("Incomming connection from {}".format(address))
-
+    
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect(("www.google.com", 80))
 
     incomingSocket.setblocking(0)
     client_socket.setblocking(0)
 
-    if os.fork() != 0:
+    if os.fork() == 0:
         while True:
             request = bytearray()
             while True:
@@ -31,8 +31,10 @@ while True:
                 if part:
                     client_socket.sendall(part)
                     request.extend(part)
-                else:
+                elif part is None:
                     break
+                else:
+                    exit(0)
             
             if request:
                 print(request)
@@ -49,8 +51,17 @@ while True:
                 if part:
                     incomingSocket.sendall(part)
                     response.extend(part)
-                else:
+                elif part is None:
                     break
+                else:
+                    exit(0)
 
             if response:
                 print(response)
+            
+            select.select(
+                [incomingSocket, client_socket],
+                [],
+                [incomingSocket, client_socket],
+                1.0
+            )
