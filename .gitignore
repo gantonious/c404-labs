@@ -1,1 +1,3 @@
 lab1env/
+venv/
+*.pyc
